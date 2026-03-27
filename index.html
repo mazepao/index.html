@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JMD Táxi — Sistema de Vale-Táxi</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --blue:#1a3fa0;--blue-d:#0e2670;--blue-m:#2c55c5;--blue-l:#e8edf8;
+  --red:#d42b2b;--white:#fff;--gray:#f5f7fc;--border:#c8d3ef;
+  --text:#1a1a2e;--muted:#5a6490;--line:#dce4f5;
+  --green:#1a6b35;--green-l:#e6f4ea;
+}
+body{font-family:'IBM Plex Sans',sans-serif;background:var(--gray);color:var(--text);min-height:100vh}
+
+/* ── LOGIN ── */
+#login-screen{
+  display:flex;align-items:center;justify-content:center;
+  min-height:100vh;background:var(--blue-d);
+  animation:fadein .4s ease;
+}
+.login-box{
+  background:white;border-radius:16px;padding:40px 36px;
+  width:360px;box-shadow:0 20px 60px rgba(0,0,0,.3);
+}
+.login-logo{text-align:center;margin-bottom:28px}
+.login-logo .logo-pill{
+  display:inline-block;background:var(--blue);color:white;
+  font-size:28px;font-weight:700;padding:6px 20px;border-radius:8px;
+  letter-spacing:3px;font-family:'IBM Plex Mono',monospace;
+}
+.login-logo .taxi-label{font-size:11px;color:var(--muted);letter-spacing:3px;text-transform:uppercase;margin-top:6px}
+.login-box h2{font-size:16px;color:var(--blue);margin-bottom:20px;text-align:center}
+.login-field{margin-bottom:14px}
+.login-field label{font-size:12px;color:var(--muted);display:block;margin-bottom:5px;font-weight:500}
+.login-field input{
+  width:100%;padding:10px 12px;border:1.5px solid var(--border);
+  border-radius:8px;font-size:14px;font-family:'IBM Plex Sans',sans-serif;
+  transition:border .15s;
+}
+.login-field input:focus{outline:none;border-color:var(--blue)}
+.login-err{font-size:12px;color:var(--red);margin-bottom:10px;min-height:16px;text-align:center}
+.login-btn{
+  width:100%;padding:11px;background:var(--blue);color:white;
+  border:none;border-radius:8px;font-size:14px;font-weight:600;
+  cursor:pointer;font-family:'IBM Plex Sans',sans-serif;
+  transition:background .15s;
+}
+.login-btn:hover{background:var(--blue-d)}
+.login-hint{font-size:11px;color:var(--muted);text-align:center;margin-top:12px}
+
+/* ── APP SHELL ── */
+#app{display:none;flex-direction:column;min-height:100vh}
+#app.visible{display:flex}
+
+.topbar{
+  background:var(--blue);color:white;padding:0 20px;
+  display:flex;align-items:center;justify-content:space-between;
+  height:54px;border-bottom:3px solid var(--blue-m);position:sticky;top:0;z-index:100;
+}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-box{
+  background:white;color:var(--blue);font-weight:800;font-size:17px;
+  padding:3px 10px;border-radius:6px;letter-spacing:2px;
+  font-family:'IBM Plex Mono',monospace;
+}
+.logo-info{display:flex;flex-direction:column}
+.logo-sub{font-size:9px;color:#aabcee;letter-spacing:3px;text-transform:uppercase}
+.logo-title{font-size:13px;font-weight:600}
+.topbar-right{display:flex;align-items:center;gap:8px}
+.user-badge{
+  background:rgba(255,255,255,.15);border-radius:20px;
+  padding:4px 12px;font-size:12px;color:#d0daff;
+}
+.logout-btn{
+  background:transparent;border:1px solid rgba(255,255,255,.3);
+  color:#aabcee;padding:5px 12px;border-radius:6px;cursor:pointer;
+  font-size:12px;font-family:'IBM Plex Sans',sans-serif;
+  transition:background .15s;
+}
+.logout-btn:hover{background:rgba(255,255,255,.1);color:white}
+
+.nav{display:flex;gap:2px}
+.nav-btn{
+  background:transparent;border:none;color:#aabcee;
+  padding:8px 14px;border-radius:6px;cursor:pointer;
+  font-size:12px;font-weight:500;font-family:'IBM Plex Sans',sans-serif;
+  transition:background .15s,color .15s;white-space:nowrap;
+}
+.nav-btn:hover{background:rgba(255,255,255,.1);color:white}
+.nav-btn.active{background:rgba(255,255,255,.18);color:white}
+
+.content{flex:1;padding:20px;max-width:1200px;margin:0 auto;width:100%}
+.page{display:none}.page.active{display:block}
+
+/* ── CARDS ── */
+.card{background:white;border-radius:10px;border:.5px solid var(--border);padding:20px;margin-bottom:14px}
+.card-title{
+  font-size:11px;font-weight:600;color:var(--blue);
+  margin-bottom:14px;padding-bottom:8px;
+  border-bottom:1.5px solid var(--blue-l);
+  text-transform:uppercase;letter-spacing:.8px;
+}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+label{font-size:11px;color:var(--muted);display:block;margin-bottom:4px;font-weight:500}
+input,select,textarea{
+  width:100%;padding:8px 10px;border:1px solid var(--border);
+  border-radius:6px;font-size:13px;color:var(--text);
+  background:white;font-family:'IBM Plex Sans',sans-serif;
+  transition:border .15s;
+}
+input:focus,select:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 2px rgba(26,63,160,.1)}
+input[readonly]{background:#f8f9fe;color:var(--muted)}
+.btn{
+  padding:8px 18px;border-radius:6px;border:none;cursor:pointer;
+  font-size:12px;font-weight:600;font-family:'IBM Plex Sans',sans-serif;
+  transition:background .15s,transform .1s;
+}
+.btn:active{transform:scale(.98)}
+.btn-primary{background:var(--blue);color:white}
+.btn-primary:hover{background:var(--blue-d)}
+.btn-danger{background:var(--red);color:white}
+.btn-outline{background:white;color:var(--blue);border:1.5px solid var(--blue)}
+.btn-outline:hover{background:var(--blue-l)}
+.btn-green{background:var(--green);color:white}
+.btn-sm{padding:4px 10px;font-size:11px}
+.flex{display:flex;gap:8px}.flex-end{justify-content:flex-end}
+.mt12{margin-top:12px}.mt16{margin-top:16px}.mb12{margin-bottom:12px}
+.form-row{margin-bottom:12px}
+
+/* ── STATS ── */
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.stat{background:white;border-radius:8px;border:.5px solid var(--border);padding:14px 16px}
+.stat-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+.stat-value{font-size:26px;font-weight:700;color:var(--blue);margin-top:4px;font-family:'IBM Plex Mono',monospace}
+.stat-value.red{color:var(--red)}
+.stat-value.green{color:var(--green)}
+
+/* ── TABLE ── */
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{
+  background:var(--blue-l);color:var(--blue);font-weight:600;
+  padding:8px 10px;text-align:left;font-size:10px;
+  text-transform:uppercase;letter-spacing:.5px;
+}
+td{padding:8px 10px;border-bottom:.5px solid var(--line);color:var(--text)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#f8f9fe}
+.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600}
+.badge-green{background:#e6f4ea;color:#1a6b35}
+.badge-yellow{background:#fff8e1;color:#7a5c00}
+.badge-red{background:#fdecea;color:#a32d2d}
+.badge-blue{background:var(--blue-l);color:var(--blue)}
+
+/* ── VOUCHER PREVIEW ── */
+.voucher-wrap{
+  background:var(--blue);border-radius:10px;overflow:hidden;
+  font-family:'IBM Plex Mono',monospace;
+}
+.v-inner{display:flex;align-items:stretch}
+.v-left{
+  background:white;width:155px;min-width:155px;
+  padding:12px 10px;display:flex;flex-direction:column;
+  align-items:center;gap:6px;border-right:3px dashed var(--blue);
+}
+.v-logo{background:var(--blue);color:white;font-size:20px;font-weight:800;padding:4px 12px;border-radius:6px;letter-spacing:2px}
+.v-taxi{font-size:9px;color:var(--blue);letter-spacing:3px;font-weight:700;text-transform:uppercase}
+.v-tag{background:var(--blue);color:white;font-size:8px;text-align:center;padding:2px 10px;border-radius:3px;font-weight:700;letter-spacing:1px;width:100%}
+.v-contacts{font-size:8px;color:var(--muted);text-align:center;line-height:1.7;font-family:'IBM Plex Sans',sans-serif}
+.v-right{flex:1;padding:12px 14px;background:white}
+.v-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.v-title{font-size:12px;font-weight:800;color:var(--blue);letter-spacing:2px}
+.v-num{font-size:18px;font-weight:800;color:var(--red);letter-spacing:2px}
+.v-rs{border:1.5px solid var(--blue);padding:2px 8px;border-radius:4px;font-size:10px;color:var(--blue);font-weight:700}
+.v-field{border-bottom:1px solid #b0b8d4;margin-bottom:7px;padding-bottom:1px}
+.v-field-label{font-size:8px;color:var(--muted);font-family:'IBM Plex Sans',sans-serif}
+.v-field-value{font-size:11px;color:var(--text);font-weight:600;min-height:14px}
+.v-row{display:flex;gap:14px}.v-row>div{flex:1}
+.v-footer{display:flex;border-top:1px solid var(--border);margin-top:6px}
+.v-footer-cell{flex:1;border-right:.5px solid var(--border);padding:4px 6px;font-size:8px;color:var(--muted);text-align:center;font-family:'IBM Plex Sans',sans-serif}
+.v-footer-cell:last-child{border-right:none}
+.v-side{
+  background:var(--blue);color:white;
+  writing-mode:vertical-rl;transform:rotate(180deg);
+  font-size:7px;padding:8px 4px;font-weight:700;
+  letter-spacing:1px;text-align:center;min-width:20px;
+  font-family:'IBM Plex Sans',sans-serif;
+}
+
+/* ── SEARCH ── */
+.search-bar{display:flex;gap:8px;margin-bottom:12px}
+.search-bar input{flex:1}
+
+/* ── MODAL ── */
+.modal-bg{
+  display:none;position:fixed;inset:0;
+  background:rgba(0,0,0,.5);z-index:500;
+  align-items:center;justify-content:center;
+}
+.modal-bg.open{display:flex}
+.modal{
+  background:white;border-radius:12px;padding:24px;
+  width:95%;max-width:680px;max-height:90vh;overflow-y:auto;
+  animation:fadein .2s ease;
+}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.modal-header strong{color:var(--blue);font-size:14px}
+
+/* ── LOADING ── */
+.spinner{
+  width:18px;height:18px;border:2px solid rgba(255,255,255,.3);
+  border-top-color:white;border-radius:50%;
+  display:inline-block;animation:spin .6s linear infinite;vertical-align:middle;margin-right:6px;
+}
+.saving-bar{
+  background:var(--blue-l);border:1px solid var(--border);
+  border-radius:6px;padding:8px 12px;font-size:12px;color:var(--blue);
+  margin-bottom:12px;display:none;
+}
+.saving-bar.show{display:block}
+
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fadein{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="logo-pill">JMD</div>
+      <div class="taxi-label">Táxi — Sistema de Vale-Táxi</div>
+    </div>
+    <h2>Acesso ao Sistema</h2>
+    <div class="login-field">
+      <label>Usuário</label>
+      <input type="text" id="l-user" placeholder="Digite seu usuário" autocomplete="username">
+    </div>
+    <div class="login-field">
+      <label>Senha</label>
+      <input type="password" id="l-pass" placeholder="Digite sua senha" autocomplete="current-password">
+    </div>
+    <div class="login-err" id="l-err"></div>
+    <button class="login-btn" onclick="doLogin()">Entrar</button>
+    <div class="login-hint">Usuário padrão: <strong>admin</strong> / Senha: <strong>jmd2026</strong></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="topbar">
+    <div class="logo">
+      <div class="logo-box">JMD</div>
+      <div class="logo-info">
+        <div class="logo-sub">Táxi</div>
+        <div class="logo-title">Sistema de Vale-Táxi</div>
+      </div>
+    </div>
+    <div class="nav">
+      <button class="nav-btn active" onclick="showPage('emitir',this)">+ Emitir Vale</button>
+      <button class="nav-btn" onclick="showPage('vouchers',this)">☰ Vouchers</button>
+      <button class="nav-btn" onclick="showPage('usuarios',this)">👤 Usuários</button>
+      <button class="nav-btn" onclick="showPage('motoristas',this)">🚗 Motoristas</button>
+    </div>
+    <div class="topbar-right">
+      <span class="user-badge" id="user-badge">admin</span>
+      <button class="logout-btn" onclick="doLogout()">Sair</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- EMITIR -->
+    <div class="page active" id="page-emitir">
+      <div class="stat-grid" id="stats-area"></div>
+      <div class="saving-bar" id="saving-bar">⏳ Salvando no banco de dados...</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div>
+          <div class="card">
+            <div class="card-title">Novo Vale-Táxi</div>
+            <div class="form-row">
+              <label>Usuário</label>
+              <select id="f-usuario" onchange="onUserChange()">
+                <option value="">Selecione o usuário...</option>
+              </select>
+            </div>
+            <div class="grid2 form-row">
+              <div><label>Matrícula</label><input id="f-matricula" readonly></div>
+              <div><label>Departamento</label><input id="f-depto" readonly></div>
+            </div>
+            <div class="form-row">
+              <label>Itinerário (Origem / Destino)</label>
+              <input id="f-itinerario" placeholder="Ex: Casa / Faurecia — Faurecia / Casa" oninput="renderPreview()">
+            </div>
+            <div class="grid3 form-row">
+              <div><label>Data</label><input type="date" id="f-data" onchange="renderPreview()"></div>
+              <div><label>Hora</label><input type="time" id="f-hora" onchange="renderPreview()"></div>
+              <div><label>Valor (R$)</label><input type="number" id="f-valor" placeholder="0.00" step="0.01" oninput="renderPreview()"></div>
+            </div>
+            <div class="form-row">
+              <label>Motorista</label>
+              <select id="f-motorista" onchange="renderPreview()">
+                <option value="">Selecione o motorista...</option>
+              </select>
+            </div>
+            <div class="flex flex-end mt16">
+              <button class="btn btn-outline" onclick="limparForm()">Limpar</button>
+              <button class="btn btn-primary" id="emitir-btn" onclick="emitirVale()">Emitir Vale</button>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="card">
+            <div class="card-title">Prévia do Voucher</div>
+            <div id="voucher-preview-area"></div>
+            <div class="flex flex-end mt12" id="pdf-btn-wrap" style="display:none!important">
+              <button class="btn btn-green" onclick="exportPDF(currentVoucher)">⬇ Exportar PDF</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VOUCHERS -->
+    <div class="page" id="page-vouchers">
+      <div class="card">
+        <div class="card-title">Vouchers Emitidos</div>
+        <div class="search-bar">
+          <input id="s-voucher" placeholder="Buscar por usuário, matrícula, número..." oninput="renderVouchers()">
+          <select id="f-status" onchange="renderVouchers()" style="width:160px">
+            <option value="">Todos os status</option>
+            <option>Emitido</option><option>Utilizado</option><option>Cancelado</option>
+          </select>
+          <button class="btn btn-outline" onclick="loadData()">↺ Atualizar</button>
+        </div>
+        <div class="table-wrap">
+          <table><thead><tr>
+            <th>Nº</th><th>Usuário</th><th>Matrícula</th>
+            <th>Itinerário</th><th>Data</th><th>Valor</th>
+            <th>Motorista</th><th>Status</th><th>Ações</th>
+          </tr></thead>
+          <tbody id="vouchers-body"></tbody></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- USUARIOS -->
+    <div class="page" id="page-usuarios">
+      <div style="display:grid;grid-template-columns:1fr 1.6fr;gap:16px">
+        <div class="card">
+          <div class="card-title">Novo Usuário</div>
+          <div class="form-row"><label>Nome Completo</label><input id="u-nome" placeholder="Ex: Rodrigo Alves da Silva"></div>
+          <div class="grid2 form-row">
+            <div><label>Matrícula</label><input id="u-mat" placeholder="37002205"></div>
+            <div><label>Departamento</label><input id="u-depto" placeholder="Manutenção"></div>
+          </div>
+          <div class="form-row"><label>Empresa</label><input id="u-empresa" placeholder="Faurecia Automotivo do Brasil"></div>
+          <div class="flex flex-end mt12">
+            <button class="btn btn-primary" onclick="addUsuario()">Adicionar</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Usuários Cadastrados</div>
+          <div class="search-bar"><input id="s-usuario" placeholder="Buscar usuário..." oninput="renderUsuarios()"></div>
+          <div class="table-wrap">
+            <table><thead><tr><th>Nome</th><th>Matrícula</th><th>Depto</th><th>Empresa</th><th></th></tr></thead>
+            <tbody id="usuarios-body"></tbody></table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MOTORISTAS -->
+    <div class="page" id="page-motoristas">
+      <div style="display:grid;grid-template-columns:1fr 1.6fr;gap:16px">
+        <div class="card">
+          <div class="card-title">Novo Motorista</div>
+          <div class="form-row"><label>Nome</label><input id="m-nome" placeholder="Ex: Cláudio"></div>
+          <div class="grid2 form-row">
+            <div><label>Telefone</label><input id="m-tel" placeholder="41 - 99969-9101"></div>
+            <div><label>Veículo</label><input id="m-veiculo" placeholder="Corolla Branco"></div>
+          </div>
+          <div class="flex flex-end mt12">
+            <button class="btn btn-primary" onclick="addMotorista()">Adicionar</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Motoristas Cadastrados</div>
+          <div class="table-wrap">
+            <table><thead><tr><th>Nome</th><th>Telefone</th><th>Veículo</th><th>Corridas</th><th></th></tr></thead>
+            <tbody id="motoristas-body"></tbody></table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- content -->
+</div><!-- app -->
+
+<!-- MODAL VISUALIZAR VOUCHER -->
+<div class="modal-bg" id="modal-view">
+  <div class="modal">
+    <div class="modal-header">
+      <strong>Vale-Táxi</strong>
+      <div class="flex">
+        <button class="btn btn-green btn-sm" id="modal-pdf-btn">⬇ PDF</button>
+        <button class="btn btn-outline btn-sm" onclick="closeModal('modal-view')">Fechar</button>
+      </div>
+    </div>
+    <div id="modal-voucher-content"></div>
+  </div>
+</div>
+
+<script>
+// ───────────────────────────────────────────────────────────
+// STORAGE via Anthropic API (persistent key-value)
+// ───────────────────────────────────────────────────────────
+const USERS_KEY   = 'jmd_usuarios';
+const MOTS_KEY    = 'jmd_motoristas';
+const VOUCS_KEY   = 'jmd_vouchers';
+const COUNTER_KEY = 'jmd_counter';
+
+async function dbGet(key) {
+  try {
+    const r = await window.storage.get(key);
+    return r ? JSON.parse(r.value) : null;
+  } catch { return null; }
+}
+async function dbSet(key, val) {
+  try { await window.storage.set(key, JSON.stringify(val)); } catch(e){ console.error(e); }
+}
+
+// ───────────────────────────────────────────────────────────
+// STATE
+// ───────────────────────────────────────────────────────────
+let usuarios = [], motoristas = [], vouchers = [], nextNum = 15170;
+let currentVoucher = null;
+let loggedUser = null;
+
+const ACCOUNTS = { admin: 'jmd2026', claudio: 'taxi123', gerente: 'jmd@2026' };
+
+// ───────────────────────────────────────────────────────────
+// LOGIN
+// ───────────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    if (document.getElementById('login-screen').style.display !== 'none') doLogin();
+  }
+});
+
+function doLogin() {
+  const u = document.getElementById('l-user').value.trim().toLowerCase();
+  const p = document.getElementById('l-pass').value;
+  const err = document.getElementById('l-err');
+  if (!ACCOUNTS[u] || ACCOUNTS[u] !== p) {
+    err.textContent = 'Usuário ou senha incorretos.';
+    document.getElementById('l-pass').value = '';
+    return;
+  }
+  err.textContent = '';
+  loggedUser = u;
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').classList.add('visible');
+  document.getElementById('user-badge').textContent = u;
+  init();
+}
+
+function doLogout() {
+  loggedUser = null;
+  document.getElementById('app').classList.remove('visible');
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('l-user').value = '';
+  document.getElementById('l-pass').value = '';
+}
+
+// ───────────────────────────────────────────────────────────
+// INIT & LOAD DATA
+// ───────────────────────────────────────────────────────────
+async function init() {
+  setSaving(true);
+  await loadData();
+  populateSelects();
+  renderPreview();
+  updateStats();
+  setSaving(false);
+}
+
+async function loadData() {
+  setSaving(true);
+  const [u, m, v, n] = await Promise.all([
+    dbGet(USERS_KEY), dbGet(MOTS_KEY), dbGet(VOUCS_KEY), dbGet(COUNTER_KEY)
+  ]);
+  usuarios    = u || defaultUsuarios();
+  motoristas  = m || defaultMotoristas();
+  vouchers    = v || [];
+  nextNum     = n || 15170;
+  if (!u) await dbSet(USERS_KEY, usuarios);
+  if (!m) await dbSet(MOTS_KEY, motoristas);
+  populateSelects();
+  updateStats();
+  renderVouchers();
+  renderUsuarios();
+  renderMotoristas();
+  setSaving(false);
+}
+
+function defaultUsuarios() {
+  return [
+    {id:1,nome:'Rodrigo Alves da Silva',matricula:'37002205',depto:'Manutenção',empresa:'Faurecia Automotivo do Brasil'},
+    {id:2,nome:'Ana Paula Ferreira',matricula:'37001100',depto:'Qualidade',empresa:'Faurecia Automotivo do Brasil'},
+    {id:3,nome:'Carlos Eduardo Lima',matricula:'37003344',depto:'Produção',empresa:'Faurecia Automotivo do Brasil'},
+  ];
+}
+function defaultMotoristas() {
+  return [
+    {id:1,nome:'Cláudio',tel:'41 - 99969-9101',veiculo:'Corolla Branco'},
+    {id:2,nome:'Sidnei',tel:'41 - 99595-5050',veiculo:'Civic Prata'},
+    {id:3,nome:'Vanderlei',tel:'41 - 99993-9448',veiculo:'HB20 Preto'},
+  ];
+}
+
+function setSaving(on) {
+  document.getElementById('saving-bar').classList.toggle('show', on);
+}
+
+// ───────────────────────────────────────────────────────────
+// NAV
+// ───────────────────────────────────────────────────────────
+function showPage(name, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  if (btn) btn.classList.add('active');
+  if (name === 'emitir')    { populateSelects(); renderPreview(); updateStats(); }
+  if (name === 'vouchers')  renderVouchers();
+  if (name === 'usuarios')  renderUsuarios();
+  if (name === 'motoristas') renderMotoristas();
+}
+
+// ───────────────────────────────────────────────────────────
+// FORM HELPERS
+// ───────────────────────────────────────────────────────────
+function populateSelects() {
+  const su = document.getElementById('f-usuario');
+  const sm = document.getElementById('f-motorista');
+  const cu = su.value, cm = sm.value;
+  su.innerHTML = '<option value="">Selecione o usuário...</option>' +
+    usuarios.map(u => `<option value="${u.id}">${u.nome}</option>`).join('');
+  sm.innerHTML = '<option value="">Selecione o motorista...</option>' +
+    motoristas.map(m => `<option value="${m.id}">${m.nome}</option>`).join('');
+  su.value = cu; sm.value = cm;
+}
+
+function onUserChange() {
+  const uid = document.getElementById('f-usuario').value;
+  const u = usuarios.find(x => x.id == uid);
+  document.getElementById('f-matricula').value = u ? u.matricula : '';
+  document.getElementById('f-depto').value     = u ? u.depto : '';
+  renderPreview();
+}
+
+function getFormData() {
+  const uid = document.getElementById('f-usuario').value;
+  const mid = document.getElementById('f-motorista').value;
+  const u = usuarios.find(x => x.id == uid);
+  const m = motoristas.find(x => x.id == mid);
+  return {
+    usuario: u?.nome || '', matricula: u?.matricula || '',
+    depto: u?.depto || '', empresa: u?.empresa || '',
+    itinerario: document.getElementById('f-itinerario').value,
+    data: document.getElementById('f-data').value,
+    hora: document.getElementById('f-hora').value,
+    valor: document.getElementById('f-valor').value,
+    motorista: m?.nome || '', uid, mid,
+  };
+}
+
+// ───────────────────────────────────────────────────────────
+// VOUCHER HTML
+// ───────────────────────────────────────────────────────────
+function buildVoucherHTML(d, num) {
+  const df = d.data ? new Date(d.data+'T12:00').toLocaleDateString('pt-BR') : '___/___/___';
+  const vf = d.valor ? 'R$ '+parseFloat(d.valor).toFixed(2).replace('.',',') : 'R$';
+  return `
+  <div class="voucher-wrap">
+    <div class="v-inner">
+      <div class="v-left">
+        <div class="v-taxi">Táxi</div>
+        <div class="v-logo">JMD</div>
+        <div class="v-tag">Chamadas</div>
+        <div class="v-contacts">Cláudio 41-99969-9101<br>Sidnei 41-99595-5050<br>Vanderlei 41-99993-9448</div>
+        <div class="v-tag">Agendamentos</div>
+        <div class="v-contacts">taxi.jmd@gmail.com<br>R. Miguel Repinoski, 66<br>CEP 83420-000 — Quatro Barras PR</div>
+      </div>
+      <div class="v-right">
+        <div class="v-top">
+          <div class="v-title">VALE – TÁXI</div>
+          <div class="v-num">${num}</div>
+          <div class="v-rs">${vf}</div>
+        </div>
+        <div class="v-field"><div class="v-field-label">Pague por este vale:</div><div class="v-field-value">&nbsp;</div></div>
+        <div class="v-field"><div class="v-field-label">Usuário</div><div class="v-field-value">${d.usuario}</div></div>
+        <div class="v-row">
+          <div class="v-field"><div class="v-field-label">Matrícula</div><div class="v-field-value">${d.matricula}</div></div>
+          <div class="v-field"><div class="v-field-label">Departamento</div><div class="v-field-value">${d.depto}</div></div>
+        </div>
+        <div class="v-field"><div class="v-field-label">Itinerário</div><div class="v-field-value">${d.itinerario}</div></div>
+        <div class="v-row">
+          <div class="v-field"><div class="v-field-label">Data</div><div class="v-field-value">${df}</div></div>
+          <div class="v-field"><div class="v-field-label">Hora</div><div class="v-field-value">${d.hora||'—'}</div></div>
+          <div class="v-field"><div class="v-field-label">Motorista</div><div class="v-field-value">${d.motorista}</div></div>
+        </div>
+        <div class="v-footer">
+          <div class="v-footer-cell">Assinatura / Carimbo Gerente</div>
+          <div class="v-footer-cell">${d.empresa||'Empresa Contratante'}</div>
+          <div class="v-footer-cell">Visto do Motorista</div>
+        </div>
+      </div>
+      <div class="v-side">VÁLIDO SOMENTE PARA USO EM VEÍCULOS AUTORIZADOS</div>
+    </div>
+  </div>`;
+}
+
+function renderPreview() {
+  document.getElementById('voucher-preview-area').innerHTML = buildVoucherHTML(getFormData(), nextNum);
+}
+
+// ───────────────────────────────────────────────────────────
+// EMITIR VALE
+// ───────────────────────────────────────────────────────────
+async function emitirVale() {
+  const d = getFormData();
+  if (!d.uid)        { alert('Selecione um usuário.'); return; }
+  if (!d.itinerario) { alert('Informe o itinerário.'); return; }
+  if (!d.data)       { alert('Informe a data.'); return; }
+
+  const btn = document.getElementById('emitir-btn');
+  btn.innerHTML = '<span class="spinner"></span>Salvando...';
+  btn.disabled = true;
+
+  const v = { ...d, num: nextNum, status: 'Emitido', id: Date.now(), emitidoPor: loggedUser, emitidoEm: new Date().toISOString() };
+  vouchers.unshift(v);
+  nextNum++;
+  currentVoucher = v;
+
+  await dbSet(VOUCS_KEY, vouchers);
+  await dbSet(COUNTER_KEY, nextNum);
+
+  document.getElementById('voucher-preview-area').innerHTML = buildVoucherHTML(v, v.num);
+  document.getElementById('pdf-btn-wrap').style.setProperty('display','flex','important');
+  updateStats();
+
+  btn.innerHTML = 'Emitir Vale';
+  btn.disabled = false;
+  showToast('Vale nº '+v.num+' emitido e salvo com sucesso!');
+}
+
+function limparForm() {
+  ['f-usuario','f-itinerario','f-data','f-hora','f-valor','f-motorista'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('f-matricula').value = '';
+  document.getElementById('f-depto').value = '';
+  renderPreview();
+}
+
+// ───────────────────────────────────────────────────────────
+// STATS
+// ───────────────────────────────────────────────────────────
+function updateStats() {
+  const total = vouchers.length;
+  const totalVal = vouchers.reduce((s,v)=>s+(parseFloat(v.valor)||0),0);
+  const emitidos = vouchers.filter(v=>v.status==='Emitido').length;
+  const utilizados = vouchers.filter(v=>v.status==='Utilizado').length;
+  document.getElementById('stats-area').innerHTML = `
+    <div class="stat"><div class="stat-label">Total Emitidos</div><div class="stat-value">${total}</div></div>
+    <div class="stat"><div class="stat-label">Valor Total</div><div class="stat-value" style="font-size:18px">R$ ${totalVal.toFixed(2).replace('.',',')}</div></div>
+    <div class="stat"><div class="stat-label">Em Aberto</div><div class="stat-value green">${emitidos}</div></div>
+    <div class="stat"><div class="stat-label">Utilizados</div><div class="stat-value red">${utilizados}</div></div>
+  `;
+}
+
+// ───────────────────────────────────────────────────────────
+// VOUCHERS TABLE
+// ───────────────────────────────────────────────────────────
+function renderVouchers() {
+  const q  = document.getElementById('s-voucher').value.toLowerCase();
+  const sf = document.getElementById('f-status').value;
+  const filtered = vouchers.filter(v => {
+    const match = !q || v.usuario.toLowerCase().includes(q) || v.matricula.includes(q)
+      || String(v.num).includes(q) || v.motorista?.toLowerCase().includes(q);
+    return match && (!sf || v.status === sf);
+  });
+  const tbody = document.getElementById('vouchers-body');
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:20px">Nenhum voucher encontrado.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = filtered.map(v => {
+    const bc = v.status==='Utilizado'?'badge-red':v.status==='Cancelado'?'badge-yellow':'badge-green';
+    const df = v.data ? new Date(v.data+'T12:00').toLocaleDateString('pt-BR') : '-';
+    const vf = v.valor ? 'R$ '+parseFloat(v.valor).toFixed(2).replace('.',',') : '-';
+    return `<tr>
+      <td><strong style="font-family:'IBM Plex Mono',monospace">${v.num}</strong></td>
+      <td>${v.usuario}</td><td>${v.matricula}</td>
+      <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${v.itinerario}</td>
+      <td>${df}</td><td>${vf}</td><td>${v.motorista||'-'}</td>
+      <td><span class="badge ${bc}">${v.status}</span></td>
+      <td>
+        <div class="flex">
+          <button class="btn btn-outline btn-sm" onclick="verVoucher(${v.id})">Ver</button>
+          <button class="btn btn-green btn-sm" onclick="pdfVoucher(${v.id})">PDF</button>
+          ${v.status==='Emitido'?`<button class="btn btn-sm" style="background:#fff8e1;color:#7a5c00;border:1px solid #f0d080" onclick="marcarUtilizado(${v.id})">✓ Uso</button>`:''}
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function verVoucher(id) {
+  const v = vouchers.find(x=>x.id===id);
+  if (!v) return;
+  document.getElementById('modal-voucher-content').innerHTML = buildVoucherHTML(v, v.num);
+  document.getElementById('modal-pdf-btn').onclick = () => exportPDF(v);
+  document.getElementById('modal-view').classList.add('open');
+}
+
+function pdfVoucher(id) {
+  const v = vouchers.find(x=>x.id===id);
+  if (v) exportPDF(v);
+}
+
+async function marcarUtilizado(id) {
+  const v = vouchers.find(x=>x.id===id);
+  if (!v) return;
+  v.status = 'Utilizado';
+  await dbSet(VOUCS_KEY, vouchers);
+  renderVouchers();
+  showToast('Vale nº '+v.num+' marcado como utilizado.');
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// ───────────────────────────────────────────────────────────
+// EXPORT PDF REAL (jsPDF)
+// ───────────────────────────────────────────────────────────
+function exportPDF(v) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation:'landscape', unit:'mm', format:'a5' });
+
+  const BLU = [26,63,160];
+  const BLU_L = [232,237,248];
+  const RED = [212,43,43];
+  const W = 210, H = 148;
+
+  // fundo azul
+  doc.setFillColor(...BLU);
+  doc.rect(0,0,W,H,'F');
+
+  // painel branco esquerdo (capa)
+  doc.setFillColor(255,255,255);
+  doc.roundedRect(3,3,46,H-6,4,4,'F');
+
+  // logo JMD
+  doc.setFillColor(...BLU);
+  doc.roundedRect(8,10,36,14,3,3,'F');
+  doc.setTextColor(255,255,255);
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(16);
+  doc.text('JMD',26,20,{align:'center'});
+
+  doc.setFontSize(7);
+  doc.setTextColor(...BLU);
+  doc.text('TÁXI',26,27,{align:'center'});
+
+  // tag Chamadas
+  doc.setFillColor(...BLU);
+  doc.roundedRect(8,30,36,6,1,1,'F');
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(6);
+  doc.text('Chamadas',26,34,{align:'center'});
+
+  doc.setTextColor(60,60,80);
+  doc.setFontSize(5.5);
+  doc.setFont('helvetica','normal');
+  const contacts = ['Cláudio  41-99969-9101','Sidnei  41-99595-5050','Vanderlei  41-99993-9448'];
+  contacts.forEach((c,i)=>doc.text(c,26,40+i*5,{align:'center'}));
+
+  doc.setFillColor(...BLU);
+  doc.roundedRect(8,57,36,6,1,1,'F');
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(6);
+  doc.text('Agendamentos',26,61,{align:'center'});
+
+  doc.setTextColor(60,60,80);
+  doc.setFontSize(5);
+  doc.setFont('helvetica','normal');
+  doc.text('taxi.jmd@gmail.com',26,67,{align:'center'});
+  doc.text('R. Miguel Repinoski, 66',26,71,{align:'center'});
+  doc.text('CEP 83420-000 — Quatro Barras PR',26,75,{align:'center'});
+
+  // painel branco principal
+  doc.setFillColor(255,255,255);
+  doc.rect(52,3,W-58,H-6,'F');
+
+  // linha tracejada separadora
+  doc.setDrawColor(...BLU);
+  doc.setLineDash([2,2]);
+  doc.line(51,3,51,H-3);
+  doc.setLineDash([]);
+
+  // HEADER: VALE-TÁXI  |  número  |  valor
+  let cx = 56;
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(12);
+  doc.setTextColor(...BLU);
+  doc.text('VALE – TÁXI', cx, 13);
+
+  doc.setTextColor(...RED);
+  doc.setFontSize(18);
+  doc.text(String(v.num), W/2+20, 13,{align:'center'});
+
+  const vf = v.valor ? 'R$ '+parseFloat(v.valor).toFixed(2).replace('.',',') : 'R$';
+  doc.setDrawColor(...BLU);
+  doc.setLineWidth(0.4);
+  doc.rect(W-46,6,38,10);
+  doc.setFontSize(9);
+  doc.setTextColor(...BLU);
+  doc.text(vf, W-27, 12.5,{align:'center'});
+
+  // linha
+  doc.setDrawColor(180,192,220);
+  doc.setLineWidth(0.3);
+
+  function fieldLine(label, val, y, w2) {
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(6);
+    doc.setTextColor(120,130,160);
+    doc.text(label, cx, y);
+    doc.setFontSize(9);
+    doc.setTextColor(26,26,46);
+    doc.setFont('helvetica','bold');
+    doc.text(val||'', cx, y+6);
+    doc.line(cx, y+8, cx+(w2||140), y+8);
+  }
+
+  fieldLine('Pague por este vale:', '', 18);
+  fieldLine('Usuário', v.usuario, 30);
+
+  const matW = 55;
+  fieldLine('Matrícula', v.matricula, 44, matW);
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(6);
+  doc.setTextColor(120,130,160);
+  doc.text('Departamento', cx+matW+8, 44);
+  doc.setFontSize(9);
+  doc.setTextColor(26,26,46);
+  doc.setFont('helvetica','bold');
+  doc.text(v.depto||'', cx+matW+8, 50);
+  doc.setDrawColor(180,192,220);
+  doc.line(cx+matW+8, 52, cx+140, 52);
+
+  fieldLine('Itinerário', v.itinerario, 56);
+
+  const df = v.data ? new Date(v.data+'T12:00').toLocaleDateString('pt-BR') : '';
+  fieldLine('Data', df, 70, 40);
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(6);
+  doc.setTextColor(120,130,160);
+  doc.text('Hora', cx+50, 70);
+  doc.setFontSize(9);
+  doc.setTextColor(26,26,46);
+  doc.setFont('helvetica','bold');
+  doc.text(v.hora||'', cx+50, 76);
+  doc.setDrawColor(180,192,220);
+  doc.line(cx+50, 78, cx+95, 78);
+
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(6);
+  doc.setTextColor(120,130,160);
+  doc.text('Motorista', cx+105, 70);
+  doc.setFontSize(9);
+  doc.setTextColor(26,26,46);
+  doc.setFont('helvetica','bold');
+  doc.text(v.motorista||'', cx+105, 76);
+  doc.setDrawColor(180,192,220);
+  doc.line(cx+105, 78, cx+140, 78);
+
+  // rodapé com 3 células
+  const fy = H-18;
+  doc.setDrawColor(180,192,220);
+  doc.setLineWidth(0.4);
+  doc.line(cx, fy, cx+140, fy);
+  const colW = 140/3;
+  [1,2].forEach(i=>doc.line(cx+colW*i, fy, cx+colW*i, H-6));
+
+  const footLabels = ['Assinatura / Carimbo Gerente', v.empresa||'Empresa Contratante', 'Visto do Motorista'];
+  footLabels.forEach((l,i) => {
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(5.5);
+    doc.setTextColor(120,130,160);
+    doc.text(l, cx + colW*i + colW/2, fy+6,{align:'center'});
+  });
+
+  // faixa lateral direita (texto rotacionado)
+  doc.setFillColor(...BLU);
+  doc.rect(W-6,3,4,H-6,'F');
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(5);
+  doc.setFont('helvetica','bold');
+  doc.text('VÁLIDO SOMENTE PARA USO EM VEÍCULOS AUTORIZADOS', W-4, H-6,{angle:90,align:'right'});
+
+  doc.save(`Vale_Taxi_JMD_${v.num}.pdf`);
+  showToast('PDF exportado com sucesso!');
+}
+
+// ───────────────────────────────────────────────────────────
+// USUÁRIOS
+// ───────────────────────────────────────────────────────────
+function renderUsuarios() {
+  const q = (document.getElementById('s-usuario').value||'').toLowerCase();
+  const filtered = usuarios.filter(u => !q || u.nome.toLowerCase().includes(q) || u.matricula.includes(q));
+  const tbody = document.getElementById('usuarios-body');
+  tbody.innerHTML = filtered.length ? filtered.map(u =>
+    `<tr><td>${u.nome}</td><td style="font-family:'IBM Plex Mono',monospace">${u.matricula}</td><td>${u.depto}</td>
+     <td style="font-size:11px">${u.empresa}</td>
+     <td><button class="btn btn-sm" style="background:#fdecea;color:#a32d2d;border:1px solid #f5b5b5" onclick="removeUsuario(${u.id})">Remover</button></td></tr>`
+  ).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px">Nenhum usuário encontrado.</td></tr>';
+}
+
+async function addUsuario() {
+  const nome = document.getElementById('u-nome').value.trim();
+  const mat  = document.getElementById('u-mat').value.trim();
+  const depto = document.getElementById('u-depto').value.trim();
+  const empresa = document.getElementById('u-empresa').value.trim();
+  if (!nome || !mat) { alert('Informe nome e matrícula.'); return; }
+  if (usuarios.find(u=>u.matricula===mat)) { alert('Matrícula já cadastrada.'); return; }
+  usuarios.push({id:Date.now(),nome,matricula:mat,depto,empresa});
+  await dbSet(USERS_KEY, usuarios);
+  ['u-nome','u-mat','u-depto','u-empresa'].forEach(id=>document.getElementById(id).value='');
+  populateSelects();
+  renderUsuarios();
+  showToast('Usuário adicionado e salvo!');
+}
+
+async function removeUsuario(id) {
+  if (!confirm('Remover este usuário?')) return;
+  usuarios = usuarios.filter(u=>u.id!==id);
+  await dbSet(USERS_KEY, usuarios);
+  populateSelects();
+  renderUsuarios();
+}
+
+// ───────────────────────────────────────────────────────────
+// MOTORISTAS
+// ───────────────────────────────────────────────────────────
+function renderMotoristas() {
+  const corridas = id => vouchers.filter(v=>v.mid==id).length;
+  const tbody = document.getElementById('motoristas-body');
+  tbody.innerHTML = motoristas.length ? motoristas.map(m =>
+    `<tr><td><strong>${m.nome}</strong></td><td>${m.tel}</td><td>${m.veiculo}</td>
+     <td><span class="badge badge-blue">${corridas(m.id)}</span></td>
+     <td><button class="btn btn-sm" style="background:#fdecea;color:#a32d2d;border:1px solid #f5b5b5" onclick="removeMotorista(${m.id})">Remover</button></td></tr>`
+  ).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px">Nenhum motorista cadastrado.</td></tr>';
+}
+
+async function addMotorista() {
+  const nome = document.getElementById('m-nome').value.trim();
+  const tel  = document.getElementById('m-tel').value.trim();
+  const veiculo = document.getElementById('m-veiculo').value.trim();
+  if (!nome) { alert('Informe o nome do motorista.'); return; }
+  motoristas.push({id:Date.now(),nome,tel,veiculo});
+  await dbSet(MOTS_KEY, motoristas);
+  ['m-nome','m-tel','m-veiculo'].forEach(id=>document.getElementById(id).value='');
+  populateSelects();
+  renderMotoristas();
+  showToast('Motorista adicionado e salvo!');
+}
+
+async function removeMotorista(id) {
+  if (!confirm('Remover este motorista?')) return;
+  motoristas = motoristas.filter(m=>m.id!==id);
+  await dbSet(MOTS_KEY, motoristas);
+  populateSelects();
+  renderMotoristas();
+}
+
+// ───────────────────────────────────────────────────────────
+// TOAST
+// ───────────────────────────────────────────────────────────
+function showToast(msg) {
+  let t = document.getElementById('toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'toast';
+    t.style.cssText = 'position:fixed;bottom:24px;right:24px;background:var(--blue);color:white;padding:10px 20px;border-radius:8px;font-size:13px;z-index:999;box-shadow:0 4px 20px rgba(0,0,0,.2);transition:opacity .3s';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = '1';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(()=>t.style.opacity='0', 3000);
+}
+
+// close modal on bg click
+document.getElementById('modal-view').addEventListener('click', function(e){
+  if (e.target === this) closeModal('modal-view');
+});
+</script>
+</body>
+</html>
